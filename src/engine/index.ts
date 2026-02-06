@@ -89,7 +89,7 @@ export const init = (): State => {
 };
 
 export const step = (state: State, envelope: ActionEnvelope): StepResult => {
-  if (envelope.clientSeq >= state.client.lastProcessedSeq) {
+  if (envelope.clientSeq <= state.client.lastProcessedSeq) {
     return {
       nextState: state,
       requests: [],
