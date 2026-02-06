@@ -16,4 +16,16 @@ describe('Engine.step', () => {
     expect(state.client.lastProcessedSeq).toBe(-1);
     expect(result.nextState.client.lastProcessedSeq).toBe(1);
   });
+
+  it('transitions from boot to title on BOOT_DONE', () => {
+    const state = init();
+    const envelope: ActionEnvelope = {
+      clientSeq: 1,
+      action: { type: 'BOOT_DONE' },
+    };
+
+    const result = step(state, envelope);
+
+    expect(result.nextState.sceneId).toBe('S01_TITLE');
+  });
 });

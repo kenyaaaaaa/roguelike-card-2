@@ -1,18 +1,6 @@
-export type SceneId =
-  | 'S00_BOOT'
-  | 'S01_TITLE'
-  | 'S02_TITLE_OPTION'
-  | 'S03_SAVE_SELECT'
-  | 'S10_HUB'
-  | 'S20_AREA_PROGRESS'
-  | 'S21_EVENT'
-  | 'S22_MINIGAME'
-  | 'S23_SHOP'
-  | 'S24_SHRINE'
-  | 'S30_BATTLE'
-  | 'S31_BATTLE_REWARD'
-  | 'S70_GAMEOVER_DEATH'
-  | 'S71_RUN_RESULT';
+import { isActionAccepted } from './step/acceptTable';
+import type { SceneId, UIAction } from './types';
+export type { SceneId, UIAction } from './types';
 
 export type EngineError = {
   code: string;
@@ -26,11 +14,6 @@ export type EffectRequest =
   | { type: 'PLAY_SFX'; id: string }
   | { type: 'PLAY_BGM'; id: string }
   | { type: 'SHOW_TOAST'; text: string };
-
-export type UIAction = {
-  type: string;
-  payload?: Record<string, unknown>;
-};
 
 export type ActionEnvelope = {
   clientSeq: number;
@@ -54,7 +37,7 @@ export type ExecEvent = ExecEventBase & {
 };
 
 export type State = {
-  scene: SceneId;
+  sceneId: SceneId;
   ui: {
     modal: 'PAUSE' | null;
   };
@@ -71,7 +54,7 @@ export type StepResult = {
 };
 
 const INITIAL_STATE: State = {
-  scene: 'S00_BOOT',
+  sceneId: 'S00_BOOT',
   ui: {
     modal: null,
   },
@@ -82,7 +65,7 @@ const INITIAL_STATE: State = {
 
 export const init = (): State => {
   return {
-    scene: INITIAL_STATE.scene,
+    sceneId: INITIAL_STATE.sceneId,
     ui: { ...INITIAL_STATE.ui },
     client: { ...INITIAL_STATE.client },
   };
@@ -98,14 +81,35 @@ export const step = (state: State, envelope: ActionEnvelope): StepResult => {
     };
   }
 
+  if (!isActionAccepted(state.sceneId, envelope.action)) {
+    return {
+      nextState: state,
+      requests: [],
+      executionLog: null,
+      error: {
+        code: 'ACTION_REJECTED',
+        message: `Action ${envelope.action.type} is not accepted in scene ${state.sceneId}.`,
+        data: {
+          sceneId: state.sceneId,
+          action: envelope.action,
+        },
+      },
+    };
+  }
+
   const nextState: State = {
     ...state,
+    sceneId: state.sceneId,
     ui: { ...state.ui },
     client: {
       ...state.client,
       lastProcessedSeq: envelope.clientSeq,
     },
   };
+
+  if (state.sceneId === 'S00_BOOT' && envelope.action.type === 'BOOT_DONE') {
+    nextState.sceneId = 'S01_TITLE';
+  }
 
   return {
     nextState,
